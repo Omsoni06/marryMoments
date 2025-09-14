@@ -2,7 +2,10 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:10000/api";
+
+console.log("🔗 API_BASE_URL:", API_BASE_URL);
+console.log("🌍 Environment:", process.env.NODE_ENV);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
