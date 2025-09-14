@@ -1,4 +1,5 @@
 "use client";
+import PhotoUpload from "@/components/PhotoUpload";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { eventAPI, photoAPI } from "@/lib/api";
@@ -998,12 +999,16 @@ export default function EventDetailsPage() {
                   </Card>
                 </div>
 
-                {/* Photo Upload Component */}
-                <PhotoUpload
-                  eventId={params.id}
-                  onUploadComplete={handleUploadComplete}
-                />
-
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold mb-4">Upload Photos</h3>
+                  <PhotoUpload
+                    eventId={event?._id}
+                    onUploadComplete={() => {
+                      // Refresh photos or do something after upload
+                      console.log("Photos uploaded!");
+                    }}
+                  />
+                </div>
                 {/* Upload Tips */}
                 <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
                   <CardContent className="p-6">
