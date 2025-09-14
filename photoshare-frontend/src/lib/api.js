@@ -4,9 +4,6 @@ import Cookies from "js-cookie";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:10000/api";
 
-console.log("🔗 API_BASE_URL:", API_BASE_URL);
-console.log("🌍 Environment:", process.env.NODE_ENV);
-
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -49,12 +46,13 @@ export const eventAPI = {
   getByAccessCode: (accessCode) => api.get(`/events/access/${accessCode}`),
 };
 
+// ✅ FIXED: Update photo API to match your backend routes
 export const photoAPI = {
   upload: (eventId, formData) =>
-    api.post(`/events/${eventId}/photos`, formData, {
+    api.post(`/photos/upload/${eventId}`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
-  getByEvent: (eventId) => api.get(`/events/${eventId}/photos`),
+  getByEvent: (eventId) => api.get(`/photos/event/${eventId}`),
   like: (photoId) => api.post(`/photos/${photoId}/like`),
   download: (photoId) => api.get(`/photos/${photoId}/download`),
 };
