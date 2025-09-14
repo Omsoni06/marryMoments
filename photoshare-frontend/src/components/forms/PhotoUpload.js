@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useRef } from "react"; // Add useRef here
+import { useState, useCallback } from "react";
 import { photoAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,14 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import {
-  Upload,
-  X,
-  Image,
-  AlertCircle,
-  Camera,
-  Smartphone,
-} from "lucide-react"; // Add Camera, Smartphone
+import { Upload, X, Image, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PhotoUpload({ eventId, onUploadComplete }) {
@@ -26,10 +19,6 @@ export default function PhotoUpload({ eventId, onUploadComplete }) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
-
-  // Add these refs for mobile buttons
-  const fileInputRef = useRef(null);
-  const cameraInputRef = useRef(null);
 
   const handleDrag = useCallback((e) => {
     e.preventDefault();
@@ -57,12 +46,11 @@ export default function PhotoUpload({ eventId, onUploadComplete }) {
     }
   };
 
-  // Your existing handleFiles, removeFile, uploadPhotos functions stay the same...
   const handleFiles = (files) => {
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
     const validFiles = imageFiles.filter(
       (file) => file.size <= 10 * 1024 * 1024
-    );
+    ); // 10MB limit
 
     if (imageFiles.length !== files.length) {
       toast.error("Only image files are allowed");
@@ -89,6 +77,7 @@ export default function PhotoUpload({ eventId, onUploadComplete }) {
   const removeFile = (fileId) => {
     setSelectedFiles((prev) => {
       const updated = prev.filter((f) => f.id !== fileId);
+      // Revoke object URL to prevent memory leaks
       const fileToRemove = prev.find((f) => f.id === fileId);
       if (fileToRemove) {
         URL.revokeObjectURL(fileToRemove.preview);
@@ -112,6 +101,7 @@ export default function PhotoUpload({ eventId, onUploadComplete }) {
         formData.append("photos", fileObj.file);
       });
 
+      // Simulate progress for better UX
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 90) {
@@ -131,10 +121,12 @@ export default function PhotoUpload({ eventId, onUploadComplete }) {
         `${response.data.photos.length} photos uploaded successfully!`
       );
 
+      // Clean up
       selectedFiles.forEach((fileObj) => URL.revokeObjectURL(fileObj.preview));
       setSelectedFiles([]);
       setUploadProgress(0);
 
+      // Callback to refresh photos in parent component
       if (onUploadComplete) {
         onUploadComplete();
       }
@@ -158,104 +150,38 @@ export default function PhotoUpload({ eventId, onUploadComplete }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* REPLACE THIS SECTION - Enhanced File Drop Zone with Mobile Buttons */}
-        <div className="space-y-4">
-          {/* Mobile-First Buttons - Show on mobile */}
-          <div className="block md:hidden">
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <Button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                variant="outline"
-                className="h-16 flex-col space-y-1 border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-blue-50"
-              >
-                <Camera className="w-6 h-6 text-blue-600" />
-                <span className="text-sm font-medium">Take Photo</span>
-              </Button>
-
-              <Button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                className="h-16 flex-col space-y-1 border-2 border-dashed border-purple-300 hover:border-purple-500 hover:bg-purple-50"
-              >
-                <Image className="w-6 h-6 text-purple-600" />
-                <span className="text-sm font-medium">Choose Photos</span>
-              </Button>
-            </div>
-
-            {/* Mobile tip */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <div className="flex items-center">
-                <Smartphone className="w-4 h-4 text-blue-600 mr-2" />
-                <p className="text-sm text-blue-800">
-                  <strong>Mobile:</strong> Use buttons above or drag photos to
-                  the area below
-                </p>
-              </div>
-            </div>
+        {/* File Drop Zone */}
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            dragActive
+              ? "border-primary bg-primary/10"
+              : "border-gray-300 hover:border-gray-400"
+          }`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+          <div className="space-y-2">
+            <p className="text-lg font-medium">
+              Drag and drop photos here, or{" "}
+              <label className="text-primary hover:underline cursor-pointer">
+                browse files
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileInput}
+                  className="hidden"
+                />
+              </label>
+            </p>
+            <p className="text-sm text-gray-500">
+              Supports JPEG, PNG, WebP up to 10MB each
+            </p>
           </div>
-
-          {/* Enhanced Drag & Drop Area - Works on all devices */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-              dragActive
-                ? "border-primary bg-primary/10"
-                : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()} // Make entire area clickable
-          >
-            <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <div className="space-y-2">
-              <p className="text-lg font-medium">
-                Drag and drop photos here, or click to browse
-              </p>
-              <p className="text-sm text-gray-500">
-                Supports JPEG, PNG, WebP up to 10MB each
-              </p>
-
-              {/* Desktop-specific button */}
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-3 hidden md:inline-flex"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileInputRef.current?.click();
-                }}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Browse Files
-              </Button>
-            </div>
-          </div>
-
-          {/* Hidden file inputs */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleFileInput}
-            className="hidden"
-          />
-
-          {/* Camera input for mobile */}
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="camera" // This enables camera on mobile
-            onChange={handleFileInput}
-            className="hidden"
-          />
         </div>
-
-        {/* Keep all your existing code below this - Selected Files Preview, Upload Progress, Upload Button, Upload Tips */}
 
         {/* Selected Files Preview */}
         {selectedFiles.length > 0 && (

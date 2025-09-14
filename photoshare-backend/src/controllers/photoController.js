@@ -1,6 +1,7 @@
 const Photo = require("../models/Photo");
 const Event = require("../models/Event");
 const cloudinary = require("../config/cloudinary");
+const { validationResult } = require("express-validator");
 
 const uploadPhotos = async (req, res) => {
   try {
@@ -8,15 +9,24 @@ const uploadPhotos = async (req, res) => {
 
     const event = await Event.findById(eventId);
     if (!event) {
-      return res.status(404).json({ message: "Event not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
     }
 
     if (event.photographer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
     }
 
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded" });
+      return res.status(400).json({
+        success: false,
+        message: "No files uploaded",
+      });
     }
 
     const uploadPromises = req.files.map(async (file) => {
@@ -69,14 +79,16 @@ const uploadPhotos = async (req, res) => {
     const photos = await Promise.all(uploadPromises);
 
     // Emit socket event for real-time updates
-    req.io.to(`event-${eventId}`).emit("photos-uploaded", {
-      eventId,
-      photos: photos.map((p) => ({
-        id: p._id,
-        thumbnailUrl: p.thumbnailUrl,
-        uploadedAt: p.createdAt,
-      })),
-    });
+    if (req.io) {
+      req.io.to(`event-${eventId}`).emit("photos-uploaded", {
+        eventId,
+        photos: photos.map((p) => ({
+          id: p._id,
+          thumbnailUrl: p.thumbnailUrl,
+          uploadedAt: p.createdAt,
+        })),
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -84,7 +96,12 @@ const uploadPhotos = async (req, res) => {
       photos,
     });
   } catch (error) {
-    res.status(500).json({ message: "Upload failed", error: error.message });
+    console.error("Upload photos error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Upload failed",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
@@ -95,7 +112,10 @@ const getPhotosByEvent = async (req, res) => {
 
     const event = await Event.findById(eventId);
     if (!event) {
-      return res.status(404).json({ message: "Event not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
     }
 
     const photos = await Photo.find({ event: eventId })
@@ -116,7 +136,11 @@ const getPhotosByEvent = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Get photos by event error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching photos",
+    });
   }
 };
 
@@ -129,7 +153,10 @@ const likePhoto = async (req, res) => {
     );
 
     if (!photo) {
-      return res.status(404).json({ message: "Photo not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Photo not found",
+      });
     }
 
     res.json({
@@ -137,7 +164,11 @@ const likePhoto = async (req, res) => {
       likes: photo.likes,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Like photo error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
@@ -146,7 +177,10 @@ const downloadPhoto = async (req, res) => {
     const photo = await Photo.findById(req.params.photoId);
 
     if (!photo) {
-      return res.status(404).json({ message: "Photo not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Photo not found",
+      });
     }
 
     // Increment download count
@@ -157,7 +191,11 @@ const downloadPhoto = async (req, res) => {
       downloadUrl: photo.cloudinaryUrl,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Download photo error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
