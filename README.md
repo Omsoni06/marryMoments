@@ -24,7 +24,7 @@ PhotoShare Pro allows photographers to upload wedding photos instantly and share
 
 ## 🚀 Live Demo
 
-- [PhotoShare Pro](https://marrymoments-frontend.onrender.com)
+- [MarryMoments](https://marrymoments-frontend.onrender.com)
 
 ## 📱 Usage
 
