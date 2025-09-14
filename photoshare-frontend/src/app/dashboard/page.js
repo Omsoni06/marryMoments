@@ -1,5 +1,6 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
+import UserProfileDropdown from "@/components/ui/UserProfileDropdown";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { eventAPI } from "@/lib/api";
@@ -114,58 +115,39 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header - Mobile Responsive */}
-      <header className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-white/20 sticky top-0 z-40">
+      // Replace your existing header section with this:
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14 md:h-16">
-            {/* Logo & Title */}
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
-                <Camera className="w-4 h-4 md:w-6 md:h-6 text-white" />
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mr-4">
+                <Camera className="w-6 h-6 text-white" />
               </div>
-              <div className="hidden sm:block">
-                <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">
                   PhotoShare Pro
                 </h1>
-                <p className="text-xs md:text-sm text-gray-500">
-                  Photographer Dashboard
+                <p className="text-sm text-gray-600">
+                  Wedding Photo Management
                 </p>
               </div>
             </div>
 
-            {/* User Menu - Mobile Responsive */}
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <Button variant="ghost" size="sm" className="relative p-2">
-                <Bell className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-red-500 rounded-full text-xs"></span>
-              </Button>
-
-              <div className="flex items-center space-x-2 md:space-x-3 bg-white/60 rounded-full px-2 md:px-4 py-1 md:py-2 shadow-sm">
-                <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs md:text-sm font-medium">
-                    {user?.name?.charAt(0)?.toUpperCase()}
-                  </span>
-                </div>
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-900">
-                    {user?.name}
-                  </p>
-                  <p className="text-xs text-gray-500">Photographer</p>
-                </div>
-              </div>
-
+            <div className="flex items-center space-x-4">
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={logout}
-                className="p-2"
+                onClick={() => setShowCreateDialog(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
               >
-                <LogOut className="w-4 h-4" />
+                <Plus className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Create Event</span>
               </Button>
+
+              {/* ✅ ADD USER PROFILE DROPDOWN */}
+              <UserProfileDropdown />
             </div>
           </div>
         </div>
       </header>
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
         {/* Welcome Section - Mobile Responsive */}
         <div className="mb-6 md:mb-8">

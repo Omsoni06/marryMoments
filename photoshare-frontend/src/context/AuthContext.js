@@ -1,18 +1,11 @@
 "use client";
+
 import { createContext, useContext, useState, useEffect } from "react";
 import { authAPI } from "@/lib/api";
 import Cookies from "js-cookie";
-import { toast } from "sonner"; // Changed from react-hot-toast
+import { toast } from "sonner";
 
 const AuthContext = createContext();
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
-};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -23,14 +16,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAuth = async () => {
-    try {
-      const token = Cookies.get("token");
-      if (token) {
+    const token = Cookies.get("token");
+    if (token) {
+      try {
         const response = await authAPI.getProfile();
         setUser(response.data.user);
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        Cookies.remove("token");
       }
-    } catch (error) {
-      Cookies.remove("token");
     }
     setLoading(false);
   };
@@ -42,13 +36,13 @@ export const AuthProvider = ({ children }) => {
 
       Cookies.set("token", token, { expires: 7 });
       setUser(user);
-      toast.success("Successfully logged in!"); // Using Sonner
 
+      toast.success(`Welcome back, ${user.name}! 👋`);
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || "Login failed";
-      toast.error(message); // Using Sonner
-      return { success: false, message };
+      console.error("Login error:", error);
+      toast.error(error.response?.data?.message || "Login failed");
+      return { success: false, message: error.response?.data?.message };
     }
   };
 
@@ -59,34 +53,52 @@ export const AuthProvider = ({ children }) => {
 
       Cookies.set("token", token, { expires: 7 });
       setUser(user);
-      toast.success("Account created successfully!"); // Using Sonner
 
+      toast.success(`Welcome, ${user.name}! Account created successfully! 🎉`);
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || "Registration failed";
-      toast.error(message); // Using Sonner
-      return { success: false, message };
+      console.error("Registration error:", error);
+      toast.error(error.response?.data?.message || "Registration failed");
+      return { success: false, message: error.response?.data?.message };
     }
   };
 
+  // ✅ ADD LOGOUT FUNCTION
   const logout = async () => {
     try {
+      // Call backend logout endpoint (optional)
       await authAPI.logout();
-      Cookies.remove("token");
-      setUser(null);
-      toast.success("Logged out successfully"); // Using Sonner
     } catch (error) {
       console.error("Logout error:", error);
+      // Continue with logout even if backend call fails
     }
+
+    // Clear token and user state
+    Cookies.remove("token");
+    setUser(null);
+
+    // Success message
+    toast.success("Logged out successfully! 👋");
+
+    // Redirect to login page
+    window.location.href = "/login";
   };
 
   const value = {
     user,
+    loading,
     login,
     register,
-    logout,
-    loading,
+    logout, // ✅ ADD TO CONTEXT VALUE
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 };

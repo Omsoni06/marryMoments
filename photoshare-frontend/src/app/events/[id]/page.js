@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { eventAPI, photoAPI } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import UserProfileDropdown from "@/components/ui/UserProfileDropdown";
 import QRCodeGenerator from "@/components/ui/QRCodeGenerator";
 import {
   Card,
@@ -190,6 +191,7 @@ export default function EventDetailsPage() {
                 <p className="text-sm text-gray-500">Event Management</p>
               </div>
             </div>
+
             <div className="flex items-center space-x-3">
               <Badge
                 variant={event.status === "active" ? "default" : "secondary"}
@@ -208,14 +210,17 @@ export default function EventDetailsPage() {
                   event.status
                 )}
               </Badge>
+
               <Button variant="outline" size="sm" onClick={shareViaWhatsApp}>
                 <Share2 className="w-4 h-4" />
               </Button>
+
+              {/* ✅ ADD USER PROFILE DROPDOWN */}
+              <UserProfileDropdown />
             </div>
           </div>
         </div>
       </header>
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Event Header Card */}
         <div className="mb-8">
