@@ -1,6 +1,6 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
-import UserProfileDropdown from "@/components/ui/UserProfileDropdown";
+import SimpleLogoutButton from "@/components/ui/SimpleLogoutButton";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { eventAPI } from "@/lib/api";
@@ -143,7 +143,7 @@ export default function DashboardPage() {
               </Button>
 
               {/* ✅ ADD USER PROFILE DROPDOWN */}
-              <UserProfileDropdown />
+              <SimpleLogoutButton />
             </div>
           </div>
         </div>
