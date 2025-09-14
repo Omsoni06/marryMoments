@@ -54,7 +54,7 @@ export const photoAPI = {
     api.post(`/events/${eventId}/photos`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
-  getByEvent: (eventId) => api.get(`/photos/event/${eventId}`),
+  getByEvent: (eventId) => api.get(`/events/${eventId}/photos`),
   like: (photoId) => api.post(`/photos/${photoId}/like`),
   download: (photoId) => api.get(`/photos/${photoId}/download`),
 };
