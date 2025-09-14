@@ -1,4 +1,4 @@
-# 📸 PhotoShare Pro
+# 📸 MarryMoments
 
 A modern wedding photo sharing platform built for Indian photographers.
 
