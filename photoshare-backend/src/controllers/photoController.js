@@ -1,170 +1,169 @@
-const cloudinary = require("cloudinary").v2;
-const fs = require("fs");
-const path = require("path");
+const Photo = require("../models/Photo");
+const Event = require("../models/Event");
+const cloudinary = require("../config/cloudinary");
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// Upload photos to an event
 const uploadPhotos = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const files = req.files;
 
-    console.log("📸 Upload photos request:", {
-      eventId,
-      filesCount: files?.length,
-      userId: req.user?.id,
-    });
-
-    if (!files || files.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No photos provided",
-      });
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
     }
 
-    // Process each uploaded file
-    const uploadPromises = files.map(async (file) => {
-      try {
-        // Upload to Cloudinary
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: `photoshare/${eventId}`,
-          public_id: `${Date.now()}_${file.originalname}`,
-          resource_type: "image",
-          transformation: [
-            { width: 1920, height: 1080, crop: "limit" },
-            { quality: "auto" },
-          ],
-        });
+    if (event.photographer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Access denied" });
+    }
 
-        // Generate thumbnail
-        const thumbnailUrl = cloudinary.url(result.public_id, {
-          width: 400,
-          height: 400,
-          crop: "fill",
-          quality: "auto",
-        });
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
 
-        // Clean up temporary file
-        fs.unlinkSync(file.path);
+    const uploadPromises = req.files.map(async (file) => {
+      // Upload to Cloudinary
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: `photoshare/events/${eventId}`,
+            transformation: [
+              { quality: "auto:good" },
+              { fetch_format: "auto" },
+            ],
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(file.buffer);
+      });
 
-        return {
-          publicId: result.public_id,
-          url: result.secure_url,
-          thumbnailUrl,
-          originalName: file.originalname,
+      // Create thumbnail
+      const thumbnailUrl = cloudinary.url(result.public_id, {
+        transformation: [
+          { width: 300, height: 300, crop: "fill" },
+          { quality: "auto:low" },
+        ],
+      });
+
+      // Save photo record
+      const photo = await Photo.create({
+        event: eventId,
+        filename: result.public_id,
+        originalName: file.originalname,
+        cloudinaryUrl: result.secure_url,
+        cloudinaryPublicId: result.public_id,
+        thumbnailUrl,
+        uploadedBy: req.user._id,
+        metadata: {
           size: file.size,
           format: result.format,
           width: result.width,
           height: result.height,
-          uploadedBy: req.user.id,
-          uploadedAt: new Date(),
-          likes: 0,
-          downloads: 0,
-        };
-      } catch (uploadError) {
-        console.error("Error uploading file:", uploadError);
-        // Clean up temporary file on error
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
-        throw uploadError;
-      }
+        },
+      });
+
+      return photo;
     });
 
-    const uploadedPhotos = await Promise.all(uploadPromises);
+    const photos = await Promise.all(uploadPromises);
 
-    console.log("✅ Photos uploaded successfully:", uploadedPhotos.length);
+    // Emit socket event for real-time updates
+    req.io.to(`event-${eventId}`).emit("photos-uploaded", {
+      eventId,
+      photos: photos.map((p) => ({
+        id: p._id,
+        thumbnailUrl: p.thumbnailUrl,
+        uploadedAt: p.createdAt,
+      })),
+    });
 
-    res.json({
+    res.status(201).json({
       success: true,
-      message: `Successfully uploaded ${uploadedPhotos.length} photos`,
-      photos: uploadedPhotos,
+      message: `${photos.length} photos uploaded successfully`,
+      photos,
     });
   } catch (error) {
-    console.error("❌ Upload photos error:", error);
-
-    // Clean up any remaining temporary files
-    if (req.files) {
-      req.files.forEach((file) => {
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to upload photos",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Upload failed", error: error.message });
   }
 };
 
-// Get photos for an event
-const getEventPhotos = async (req, res) => {
+const getPhotosByEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { page = 1, limit = 20, sort = "-createdAt" } = req.query;
 
-    console.log("📷 Get event photos:", eventId);
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
 
-    // For now, return mock data since we don't have a database model yet
-    // You'll need to replace this with actual database queries
-    const mockPhotos = [
-      {
-        _id: "mock1",
-        publicId: "sample1",
-        url: "https://via.placeholder.com/800x600/4f46e5/ffffff?text=Sample+Photo+1",
-        thumbnailUrl:
-          "https://via.placeholder.com/400x400/4f46e5/ffffff?text=Sample+1",
-        originalName: "sample1.jpg",
-        size: 1024000,
-        format: "jpg",
-        width: 800,
-        height: 600,
-        uploadedBy: req.user?.id || "mock-user",
-        uploadedAt: new Date(),
-        likes: Math.floor(Math.random() * 10),
-        downloads: Math.floor(Math.random() * 5),
-      },
-      {
-        _id: "mock2",
-        publicId: "sample2",
-        url: "https://via.placeholder.com/800x600/7c3aed/ffffff?text=Sample+Photo+2",
-        thumbnailUrl:
-          "https://via.placeholder.com/400x400/7c3aed/ffffff?text=Sample+2",
-        originalName: "sample2.jpg",
-        size: 1536000,
-        format: "jpg",
-        width: 800,
-        height: 600,
-        uploadedBy: req.user?.id || "mock-user",
-        uploadedAt: new Date(),
-        likes: Math.floor(Math.random() * 10),
-        downloads: Math.floor(Math.random() * 5),
-      },
-    ];
+    const photos = await Photo.find({ event: eventId })
+      .populate("uploadedBy", "name")
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Photo.countDocuments({ event: eventId });
 
     res.json({
       success: true,
-      photos: mockPhotos,
+      photos,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total,
+      },
     });
   } catch (error) {
-    console.error("❌ Get event photos error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch photos",
-      error: error.message,
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const likePhoto = async (req, res) => {
+  try {
+    const photo = await Photo.findByIdAndUpdate(
+      req.params.photoId,
+      { $inc: { likes: 1 } },
+      { new: true }
+    );
+
+    if (!photo) {
+      return res.status(404).json({ message: "Photo not found" });
+    }
+
+    res.json({
+      success: true,
+      likes: photo.likes,
     });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const downloadPhoto = async (req, res) => {
+  try {
+    const photo = await Photo.findById(req.params.photoId);
+
+    if (!photo) {
+      return res.status(404).json({ message: "Photo not found" });
+    }
+
+    // Increment download count
+    await Photo.findByIdAndUpdate(photo._id, { $inc: { downloads: 1 } });
+
+    res.json({
+      success: true,
+      downloadUrl: photo.cloudinaryUrl,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 module.exports = {
   uploadPhotos,
-  getEventPhotos,
+  getPhotosByEvent,
+  likePhoto,
+  downloadPhoto,
 };
