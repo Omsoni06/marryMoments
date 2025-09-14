@@ -11,6 +11,29 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+/* Mobile photo upload improvements */
+@media (max-width: 768px) {
+  input[type="file"] {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+
+  /* Better touch targets for mobile */
+  .photo-upload-btn {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Improve image preview on mobile */
+  .photo-preview {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* Camera capture styling */
+input[type="file"][capture] {
+  -webkit-appearance: none;
+}
 
 /* Mobile optimizations */
 @media (max-width: 640px) {

@@ -51,7 +51,7 @@ export const eventAPI = {
 
 export const photoAPI = {
   upload: (eventId, formData) =>
-    api.post(`/photos/upload/${eventId}`, formData, {
+    api.post(`/events/${eventId}/photos`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
   getByEvent: (eventId) => api.get(`/photos/event/${eventId}`),
