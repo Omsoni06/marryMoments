@@ -1112,17 +1112,29 @@ export default function EventDetailsPage() {
             </TabsContent>
 
             {/* Share Tab */}
+            {/* Share Tab */}
             <TabsContent value="share" className="p-6">
-              <div className="max-w-2xl mx-auto space-y-8">
+              <div className="max-w-4xl mx-auto space-y-8">
                 <div className="text-center">
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                    Share Your Event
+                    Share Your Event Gallery
                   </h3>
                   <p className="text-gray-600">
-                    Get your photos to guests instantly
+                    Let guests access photos instantly with QR codes
                   </p>
                 </div>
 
+                {/* Enhanced QR Code Generator */}
+                <QRCodeGenerator
+                  eventTitle={event.title}
+                  accessCode={event.accessCode}
+                  venue={event.venue}
+                  onViewGallery={() =>
+                    window.open(`/gallery/${event.accessCode}`, "_blank")
+                  }
+                />
+
+                {/* Additional sharing options */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card className="border-0 shadow-lg">
                     <CardHeader className="text-center">
@@ -1131,7 +1143,7 @@ export default function EventDetailsPage() {
                       </div>
                       <CardTitle>WhatsApp Share</CardTitle>
                       <CardDescription>
-                        Share instantly with family groups
+                        Send QR code and gallery link via WhatsApp
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
@@ -1148,44 +1160,27 @@ export default function EventDetailsPage() {
                   <Card className="border-0 shadow-lg">
                     <CardHeader className="text-center">
                       <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Globe className="w-8 h-8 text-blue-600" />
+                        <Eye className="w-8 h-8 text-blue-600" />
                       </div>
-                      <CardTitle>Direct Link</CardTitle>
-                      <CardDescription>Copy and share anywhere</CardDescription>
+                      <CardTitle>Preview Gallery</CardTitle>
+                      <CardDescription>
+                        See what guests will see
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Input
-                        value={`${window.location.origin}/gallery/${event.accessCode}`}
-                        readOnly
-                        className="font-mono text-sm"
-                      />
+                    <CardContent className="text-center">
                       <Button
-                        onClick={copyGalleryLink}
+                        onClick={() =>
+                          window.open(`/gallery/${event.accessCode}`, "_blank")
+                        }
                         variant="outline"
                         className="w-full"
                       >
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy Link
+                        <Eye className="w-4 h-4 mr-2" />
+                        Open Guest View
                       </Button>
                     </CardContent>
                   </Card>
                 </div>
-
-                <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50">
-                  <CardContent className="p-8 text-center">
-                    <QrCode className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-                    <h4 className="text-lg font-semibold text-purple-900 mb-2">
-                      Access Code
-                    </h4>
-                    <div className="text-4xl font-bold font-mono text-purple-900 mb-4 tracking-wider">
-                      {event.accessCode}
-                    </div>
-                    <p className="text-purple-700 text-sm">
-                      Guests can enter this code at your website to access
-                      photos
-                    </p>
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
           </Tabs>

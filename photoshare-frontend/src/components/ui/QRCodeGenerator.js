@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
@@ -9,346 +10,208 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Download,
-  Copy,
-  Share2,
-  Printer,
-  QrCode,
-  Smartphone,
-  Camera,
-  Users,
-} from "lucide-react";
+import { Download, Share2, Copy, Eye } from "lucide-react";
 import { toast } from "sonner";
 
-export default function QRCodeGenerator({ event, galleryUrl, className = "" }) {
-  const [qrSize, setQrSize] = useState(256);
-  const [showInstructions, setShowInstructions] = useState(false);
+export default function QRCodeGenerator({
+  eventTitle,
+  accessCode,
+  venue,
+  onViewGallery,
+}) {
+  const [galleryUrl, setGalleryUrl] = useState("");
+  const [mounted, setMounted] = useState(false);
 
-  const downloadQRCode = () => {
-    const svg = document.getElementById(`qr-code-${event._id}`);
-    if (!svg) return;
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      setGalleryUrl(`${window.location.origin}/gallery/${accessCode}`);
+    }
+  }, [accessCode]);
 
-    // Create canvas
+  const downloadQR = () => {
+    const svg = document.getElementById("qr-code");
+    const svgData = new XMLSerializer().serializeToString(svg);
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    const data = new XMLSerializer().serializeToString(svg);
     const img = new Image();
 
-    img.onload = () => {
-      canvas.width = qrSize + 100; // Add padding
-      canvas.height = qrSize + 150; // Add space for text
+    canvas.width = 400;
+    canvas.height = 480;
 
+    img.onload = () => {
       // White background
       ctx.fillStyle = "white";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw QR code
-      ctx.drawImage(img, 50, 50, qrSize, qrSize);
+      // QR Code
+      ctx.drawImage(img, 50, 80, 300, 300);
 
-      // Add event title
-      ctx.fillStyle = "#1F2937";
+      // Title
+      ctx.fillStyle = "black";
       ctx.font = "bold 24px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(event.title, canvas.width / 2, 30);
+      ctx.fillText(eventTitle, 200, 40);
 
-      // Add access code
-      ctx.font = "18px Arial";
-      ctx.fillText(
-        `Access Code: ${event.accessCode}`,
-        canvas.width / 2,
-        qrSize + 80
-      );
+      // Instructions
+      ctx.font = "16px Arial";
+      ctx.fillText("Scan to view wedding photos", 200, 420);
 
-      // Add instructions
+      // Access code
       ctx.font = "14px Arial";
-      ctx.fillText(
-        "Scan to view & download photos",
-        canvas.width / 2,
-        qrSize + 110
-      );
+      ctx.fillStyle = "#666";
+      ctx.fillText(`Access Code: ${accessCode}`, 200, 450);
 
       // Download
       const link = document.createElement("a");
-      link.download = `${event.title}-QR-Code.png`;
+      link.download = `${eventTitle}-QR-Code.png`;
       link.href = canvas.toDataURL();
       link.click();
     };
 
-    const blob = new Blob([data], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
+    const svgBlob = new Blob([svgData], {
+      type: "image/svg+xml;charset=utf-8",
+    });
+    const url = URL.createObjectURL(svgBlob);
     img.src = url;
+
+    toast.success("QR Code downloaded! 📱");
   };
 
-  const copyQRCodeLink = () => {
+  const copyGalleryLink = () => {
     navigator.clipboard.writeText(galleryUrl);
     toast.success("Gallery link copied! 📋");
   };
 
-  const printQRCode = () => {
-    const printWindow = window.open("", "_blank");
-    const qrCodeElement = document.getElementById(`qr-code-${event._id}`);
+  const shareGallery = () => {
+    const message = `🎉 ${eventTitle}\n📍 ${venue}\n\n📸 View and download wedding photos!\n\n🔗 ${galleryUrl}\n📱 Access Code: ${accessCode}`;
 
-    if (printWindow && qrCodeElement) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>QR Code - ${event.title}</title>
-            <style>
-              body { 
-                font-family: Arial, sans-serif; 
-                text-align: center; 
-                padding: 40px;
-                background: white;
-              }
-              .header { 
-                margin-bottom: 30px; 
-                border-bottom: 2px solid #E5E7EB;
-                padding-bottom: 20px;
-              }
-              .qr-container { 
-                margin: 30px 0; 
-                padding: 20px;
-                border: 2px dashed #9CA3AF;
-                display: inline-block;
-              }
-              .instructions {
-                margin-top: 30px;
-                padding: 20px;
-                background: #F3F4F6;
-                border-radius: 8px;
-                max-width: 400px;
-                margin-left: auto;
-                margin-right: auto;
-              }
-              .access-code {
-                font-family: monospace;
-                font-size: 18px;
-                font-weight: bold;
-                background: #EEF2FF;
-                padding: 10px 20px;
-                border-radius: 6px;
-                display: inline-block;
-                margin: 10px 0;
-              }
-              @media print {
-                body { margin: 0; }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>${event.title}</h1>
-              <p>Wedding Photo Gallery</p>
-            </div>
-            
-            <div class="qr-container">
-              ${qrCodeElement.outerHTML}
-            </div>
-            
-            <div class="access-code">
-              Access Code: ${event.accessCode}
-            </div>
-            
-            <div class="instructions">
-              <h3>📱 How to Access Photos:</h3>
-              <p>1. Scan this QR code with your phone camera</p>
-              <p>2. Or visit the website and enter the access code</p>
-              <p>3. View and download your favorite photos</p>
-              <p>4. Share with family and friends</p>
-            </div>
-            
-            <p style="margin-top: 40px; color: #6B7280; font-size: 14px;">
-              Gallery expires: ${new Date(event.expiresAt).toLocaleDateString(
-                "en-IN"
-              )}
-            </p>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
+    if (navigator.share) {
+      navigator.share({
+        title: `${eventTitle} - Wedding Photos`,
+        text: message,
+        url: galleryUrl,
+      });
+    } else {
+      // WhatsApp fallback
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, "_blank");
     }
   };
 
+  if (!mounted) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="animate-pulse">
+            <div className="w-64 h-64 bg-gray-200 rounded-lg mx-auto mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-48 mx-auto"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className="space-y-6">
       {/* QR Code Display */}
-      <Card className="border-0 shadow-xl bg-white">
+      <Card className="border-0 shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center space-x-2">
-            <QrCode className="w-6 h-6 text-blue-600" />
-            <span>QR Code Gallery Access</span>
-          </CardTitle>
+          <CardTitle className="text-2xl">📱 Guest QR Code</CardTitle>
           <CardDescription>
-            Let guests scan this code to instantly access photos
+            Guests can scan this QR code to instantly access the photo gallery
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-6">
           {/* QR Code */}
-          <div className="bg-white p-6 rounded-xl border-2 border-dashed border-gray-200 inline-block">
+          <div className="bg-white p-6 rounded-2xl shadow-lg inline-block">
             <QRCode
-              id={`qr-code-${event._id}`}
+              id="qr-code"
               value={galleryUrl}
-              size={qrSize}
+              size={256}
               style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-              viewBox={`0 0 256 256`}
+              viewBox="0 0 256 256"
             />
-          </div>
-
-          {/* Event Info */}
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold text-gray-900">{event.title}</h3>
-            <div className="flex justify-center items-center space-x-4 text-sm text-gray-600">
-              <span>{new Date(event.date).toLocaleDateString("en-IN")}</span>
-              <span>•</span>
-              <span>{event.venue}</span>
+            <div className="mt-4 space-y-1">
+              <p className="font-bold text-lg text-gray-900">{eventTitle}</p>
+              <p className="text-sm text-gray-600">Scan to view photos</p>
+              <p className="text-xs text-gray-500 font-mono">
+                Access Code: {accessCode}
+              </p>
             </div>
-            <Badge className="bg-blue-100 text-blue-800 px-4 py-2">
-              <span className="font-mono font-bold">
-                Access Code: {event.accessCode}
-              </span>
-            </Badge>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button
-              onClick={downloadQRCode}
-              className="bg-gradient-to-r from-blue-600 to-purple-600"
+              onClick={downloadQR}
+              variant="outline"
+              className="h-12 flex-col space-y-1"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Download PNG
+              <Download className="w-4 h-4" />
+              <span className="text-xs">Download QR</span>
             </Button>
-            <Button variant="outline" onClick={printQRCode}>
-              <Printer className="w-4 h-4 mr-2" />
-              Print
+
+            <Button
+              onClick={copyGalleryLink}
+              variant="outline"
+              className="h-12 flex-col space-y-1"
+            >
+              <Copy className="w-4 h-4" />
+              <span className="text-xs">Copy Link</span>
             </Button>
-            <Button variant="outline" onClick={copyQRCodeLink}>
-              <Copy className="w-4 h-4 mr-2" />
-              Copy Link
+
+            <Button
+              onClick={shareGallery}
+              variant="outline"
+              className="h-12 flex-col space-y-1"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="text-xs">Share</span>
+            </Button>
+
+            <Button
+              onClick={() => window.open(galleryUrl, "_blank")}
+              variant="outline"
+              className="h-12 flex-col space-y-1"
+            >
+              <Eye className="w-4 h-4" />
+              <span className="text-xs">Preview</span>
             </Button>
           </div>
 
-          {/* Size Selector */}
-          <div className="flex items-center justify-center space-x-4">
-            <span className="text-sm text-gray-600">Size:</span>
-            <select
-              value={qrSize}
-              onChange={(e) => setQrSize(Number(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm"
-            >
-              <option value={128}>Small (128px)</option>
-              <option value={256}>Medium (256px)</option>
-              <option value={512}>Large (512px)</option>
-            </select>
+          {/* Gallery URL */}
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <p className="text-xs text-gray-600 mb-1">Gallery URL:</p>
+            <p className="font-mono text-sm text-blue-600 break-all">
+              {galleryUrl}
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Usage Instructions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50">
-          <CardHeader>
-            <CardTitle className="text-lg text-green-900 flex items-center">
-              <Smartphone className="w-5 h-5 mr-2" />
-              For Guests
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2 text-sm text-green-800">
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-green-200 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-                  1
-                </div>
-                <span>Open camera app on phone</span>
-              </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-green-200 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-                  2
-                </div>
-                <span>Point camera at QR code</span>
-              </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-green-200 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-                  3
-                </div>
-                <span>Tap notification to open gallery</span>
-              </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-green-200 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-                  4
-                </div>
-                <span>View & download photos</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50">
-          <CardHeader>
-            <CardTitle className="text-lg text-purple-900 flex items-center">
-              <Users className="w-5 h-5 mr-2" />
-              Display Ideas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2 text-sm text-purple-800">
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-purple-200 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-                  📋
-                </div>
-                <span>Print and place on guest tables</span>
-              </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-purple-200 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-                  🖼️
-                </div>
-                <span>Display on welcome board</span>
-              </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-purple-200 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-                  📱
-                </div>
-                <span>Share in WhatsApp groups</span>
-              </div>
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-purple-200 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-                  💌
-                </div>
-                <span>Include in wedding invitations</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* QR Code Stats */}
-      <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+      {/* Instructions for Guests */}
+      <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-1">
-                Quick Access Benefits
-              </h4>
-              <p className="text-sm text-gray-600">
-                Make it easy for guests to find their photos
-              </p>
+          <h4 className="font-semibold text-green-900 mb-3 flex items-center">
+            📱 Instructions for Guests
+          </h4>
+          <div className="space-y-2 text-sm text-green-800">
+            <div className="flex items-start">
+              <span className="font-bold mr-2">1.</span>
+              <span>Open camera app on your phone</span>
             </div>
-            <div className="flex space-x-6 text-center">
-              <div>
-                <div className="text-2xl font-bold text-blue-600">⚡</div>
-                <div className="text-xs text-gray-600">Instant Access</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-purple-600">📱</div>
-                <div className="text-xs text-gray-600">Mobile Friendly</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600">🔒</div>
-                <div className="text-xs text-gray-600">Secure</div>
-              </div>
+            <div className="flex items-start">
+              <span className="font-bold mr-2">2.</span>
+              <span>Point camera at the QR code above</span>
+            </div>
+            <div className="flex items-start">
+              <span className="font-bold mr-2">3.</span>
+              <span>Tap the notification to open gallery</span>
+            </div>
+            <div className="flex items-start">
+              <span className="font-bold mr-2">4.</span>
+              <span>View and download photos instantly!</span>
             </div>
           </div>
         </CardContent>

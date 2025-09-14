@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { eventAPI, photoAPI } from "@/lib/api";
@@ -35,6 +36,7 @@ import {
   Home,
   MessageCircle,
   Facebook,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +46,8 @@ export default function GuestGalleryPage() {
   const [photos, setPhotos] = useState([]);
   const [filteredPhotos, setFilteredPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -111,7 +115,22 @@ export default function GuestGalleryPage() {
     setLoading(false);
   };
 
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await fetchPhotos();
+      toast.success("Gallery refreshed! 🔄");
+    } catch (error) {
+      toast.error("Failed to refresh gallery");
+    }
+    setRefreshing(false);
+  };
+
   const handleLikePhoto = async (photoId) => {
+    if (actionLoading) return;
+    setActionLoading(true);
+
     try {
       const response = await photoAPI.like(photoId);
 
@@ -128,10 +147,15 @@ export default function GuestGalleryPage() {
     } catch (error) {
       console.error("Failed to like photo:", error);
       toast.error("Failed to like photo");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleDownloadPhoto = async (photo) => {
+    if (actionLoading) return;
+    setActionLoading(true);
+
     try {
       const response = await photoAPI.download(photo._id);
 
@@ -147,13 +171,24 @@ export default function GuestGalleryPage() {
     } catch (error) {
       console.error("Failed to download photo:", error);
       toast.error("Failed to download photo");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const shareGallery = () => {
     const galleryUrl = window.location.href;
-    navigator.clipboard.writeText(galleryUrl);
-    toast.success("Gallery link copied! 🔗");
+
+    if (navigator.share) {
+      navigator.share({
+        title: `${event.title} - Photo Gallery`,
+        text: `Check out photos from ${event.title}! 📸✨`,
+        url: galleryUrl,
+      });
+    } else {
+      navigator.clipboard.writeText(galleryUrl);
+      toast.success("Gallery link copied! 🔗");
+    }
   };
 
   const shareOnSocial = (platform) => {
@@ -190,6 +225,7 @@ export default function GuestGalleryPage() {
     setSelectedPhoto(filteredPhotos[newIndex]);
   };
 
+  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex items-center justify-center px-4">
@@ -206,6 +242,7 @@ export default function GuestGalleryPage() {
     );
   }
 
+  // Error State
   if (!event) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex items-center justify-center px-4">
@@ -222,6 +259,19 @@ export default function GuestGalleryPage() {
               try again.
             </CardDescription>
           </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-sm text-gray-500 mb-4">
+              Make sure you have the correct QR code or access link from the
+              photographer.
+            </p>
+            <Button
+              onClick={() => (window.location.href = "/")}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Go to Home
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );
@@ -303,7 +353,7 @@ export default function GuestGalleryPage() {
               className="bg-white bg-opacity-80 backdrop-blur-sm border-gray-200 hover:bg-white hover:shadow-md transition-all text-xs md:text-sm px-3 md:px-4 py-2 h-auto"
             >
               <Copy className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-              Copy Link
+              Share Gallery
             </Button>
             <Button
               variant="outline"
@@ -330,16 +380,36 @@ export default function GuestGalleryPage() {
         <Card className="mb-6 md:mb-8 border-0 shadow-lg bg-white bg-opacity-80 backdrop-blur-sm">
           <CardContent className="p-4 md:p-6">
             <div className="flex flex-col gap-3 md:gap-4">
+              {/* Header with refresh button */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg md:text-xl font-semibold text-gray-900">
+                  Photo Gallery
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="p-2"
+                >
+                  <RefreshCw
+                    className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+                  />
+                </Button>
+              </div>
+
+              {/* Search bar */}
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 md:w-5 md:h-5" />
                 <Input
-                  placeholder="Search photos..."
+                  placeholder="Search photos by name or tags..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8 md:pl-10 h-10 md:h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm md:text-base"
                 />
               </div>
 
+              {/* Sort and view controls */}
               <div className="flex gap-2 md:gap-3">
                 <select
                   value={sortBy}
@@ -362,22 +432,34 @@ export default function GuestGalleryPage() {
                   <Grid3X3 className="w-3 h-3 md:w-4 md:h-4" />
                 </Button>
               </div>
-            </div>
 
-            {searchTerm && (
-              <div className="mt-3 md:mt-4 flex items-center justify-between text-xs md:text-sm text-gray-600">
-                <span>
-                  Showing {filteredPhotos.length} photos for "{searchTerm}"
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchTerm("")}
-                >
-                  Clear search
-                </Button>
-              </div>
-            )}
+              {/* Search results info */}
+              {searchTerm && (
+                <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg">
+                  <span>
+                    Showing {filteredPhotos.length} photos for "{searchTerm}"
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchTerm("")}
+                    className="text-blue-600 hover:text-blue-800 p-1"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+
+              {/* Photo count display */}
+              {filteredPhotos.length > 0 && (
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">
+                    Viewing {filteredPhotos.length} of {photos.length} photos
+                    {searchTerm && ` matching "${searchTerm}"`}
+                  </p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -391,7 +473,7 @@ export default function GuestGalleryPage() {
               <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
                 {searchTerm ? "No photos found" : "No photos uploaded yet"}
               </h3>
-              <p className="text-gray-600 text-base md:text-lg max-w-md mx-auto">
+              <p className="text-gray-600 text-base md:text-lg max-w-md mx-auto mb-6">
                 {searchTerm
                   ? "Try adjusting your search terms or browse all photos"
                   : "Photos will appear here once the photographer uploads them. Check back soon!"}
@@ -399,8 +481,9 @@ export default function GuestGalleryPage() {
               {searchTerm && (
                 <Button
                   onClick={() => setSearchTerm("")}
-                  className="mt-4 md:mt-6"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
+                  <Search className="w-4 h-4 mr-2" />
                   View All Photos
                 </Button>
               )}
@@ -422,17 +505,24 @@ export default function GuestGalleryPage() {
                     loading="lazy"
                   />
 
-                  {/* Overlay - Mobile Responsive */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black from-opacity-60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute bottom-1 md:bottom-4 left-1 md:left-4 right-1 md:right-4">
+                  {/* Mobile tap hint */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center md:hidden">
+                    <div className="bg-white/90 px-3 py-1 rounded-full text-sm font-medium text-gray-800">
+                      Tap to View
+                    </div>
+                  </div>
+
+                  {/* Desktop overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden md:flex">
+                    <div className="absolute bottom-4 left-4 right-4">
                       <div className="flex justify-between items-center">
-                        <div className="flex space-x-1 md:space-x-2">
-                          <Badge className="bg-white bg-opacity-20 text-white border-white border-opacity-30 backdrop-blur-sm text-xs">
-                            <Heart className="w-2 h-2 md:w-3 md:h-3 mr-1" />
+                        <div className="flex space-x-2">
+                          <Badge className="bg-white bg-opacity-20 text-white border-white border-opacity-30 backdrop-blur-sm">
+                            <Heart className="w-3 h-3 mr-1" />
                             {photo.likes || 0}
                           </Badge>
-                          <Badge className="bg-white bg-opacity-20 text-white border-white border-opacity-30 backdrop-blur-sm text-xs">
-                            <Download className="w-2 h-2 md:w-3 md:h-3 mr-1" />
+                          <Badge className="bg-white bg-opacity-20 text-white border-white border-opacity-30 backdrop-blur-sm">
+                            <Download className="w-3 h-3 mr-1" />
                             {photo.downloads || 0}
                           </Badge>
                         </div>
@@ -440,25 +530,65 @@ export default function GuestGalleryPage() {
                     </div>
                   </div>
 
-                  {/* Action Buttons - Mobile Responsive */}
-                  <div className="absolute top-1 md:top-4 right-1 md:right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  {/* Action Button - Desktop Only */}
+                  <div className="absolute top-2 md:top-4 right-2 md:right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden md:block">
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="bg-white bg-opacity-90 text-gray-700 hover:bg-white shadow-lg p-1 md:p-2 h-6 w-6 md:h-8 md:w-8"
+                      className="bg-white bg-opacity-90 text-red-600 hover:bg-white shadow-lg backdrop-blur-sm p-2"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleLikePhoto(photo._id);
                       }}
+                      disabled={actionLoading}
                     >
                       <Heart
-                        className={`w-3 h-3 md:w-4 md:h-4 ${
+                        className={`w-4 h-4 ${
                           likedPhotos.has(photo._id)
                             ? "fill-red-500 text-red-500"
                             : ""
                         }`}
                       />
                     </Button>
+                  </div>
+
+                  {/* Photo index badge */}
+                  <div className="absolute top-2 left-2">
+                    <Badge className="bg-black bg-opacity-50 text-white border-0 text-xs">
+                      #{index + 1}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Mobile photo info */}
+                <div className="p-3 md:hidden">
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs font-medium text-gray-900 truncate flex-1 mr-2">
+                      Photo {index + 1}
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLikePhoto(photo._id);
+                        }}
+                        disabled={actionLoading}
+                        className="flex items-center text-xs text-gray-500 hover:text-red-500 transition-colors p-1"
+                      >
+                        <Heart
+                          className={`w-3 h-3 mr-1 ${
+                            likedPhotos.has(photo._id)
+                              ? "fill-red-500 text-red-500"
+                              : ""
+                          }`}
+                        />
+                        {photo.likes || 0}
+                      </button>
+                      <span className="flex items-center text-xs text-gray-500">
+                        <Download className="w-3 h-3 mr-1" />
+                        {photo.downloads || 0}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -520,7 +650,8 @@ export default function GuestGalleryPage() {
                   <Button
                     variant="secondary"
                     onClick={() => handleLikePhoto(selectedPhoto._id)}
-                    className="bg-white bg-opacity-90 text-gray-700 hover:bg-white shadow-lg backdrop-blur-sm text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2"
+                    disabled={actionLoading}
+                    className="bg-white bg-opacity-90 text-red-600 hover:bg-white shadow-lg backdrop-blur-sm text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2"
                   >
                     <Heart
                       className={`w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2 ${
@@ -535,7 +666,8 @@ export default function GuestGalleryPage() {
                   <Button
                     variant="secondary"
                     onClick={() => handleDownloadPhoto(selectedPhoto)}
-                    className="bg-white bg-opacity-90 text-gray-700 hover:bg-white shadow-lg backdrop-blur-sm text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2"
+                    disabled={actionLoading}
+                    className="bg-white bg-opacity-90 text-blue-600 hover:bg-white shadow-lg backdrop-blur-sm text-xs md:text-sm px-2 md:px-4 py-1.5 md:py-2"
                   >
                     <Download className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
                     <span className="hidden sm:inline">Download</span>
@@ -567,9 +699,12 @@ export default function GuestGalleryPage() {
               </p>
               <p className="text-xs md:text-sm text-gray-500 mt-1">
                 Save this link to access photos anytime • Gallery expires in{" "}
-                {Math.floor(
-                  (new Date(event.expiresAt) - new Date()) /
-                    (1000 * 60 * 60 * 24)
+                {Math.max(
+                  0,
+                  Math.floor(
+                    (new Date(event.expiresAt) - new Date()) /
+                      (1000 * 60 * 60 * 24)
+                  )
                 )}{" "}
                 days
               </p>
@@ -602,10 +737,21 @@ export default function GuestGalleryPage() {
                   onClick={shareGallery}
                   className="p-2"
                 >
-                  <Copy className="w-3 h-3 md:w-4 md:h-4" />
+                  <Share2 className="w-3 h-3 md:w-4 md:h-4" />
                 </Button>
               </div>
             </div>
+          </div>
+
+          {/* Powered by */}
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+            <p className="text-xs text-gray-400">
+              Powered by{" "}
+              <span className="font-semibold text-blue-600">
+                PhotoShare Pro
+              </span>{" "}
+              • Made with ❤️ for Indian weddings
+            </p>
           </div>
         </div>
       </footer>
