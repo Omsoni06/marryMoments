@@ -789,9 +789,9 @@ export default function EventDetailsPage() {
                         Event Photos
                       </h3>
                       <p className="text-gray-600 mt-1">
-                        {photos.length} photo{photos.length !== 1 ? "s" : ""} •
+                        {photos.length} photo{photos.length !== 1 ? "s" : ""} •{" "}
                         {stats.totalLikes} like
-                        {stats.totalLikes !== 1 ? "s" : ""} •
+                        {stats.totalLikes !== 1 ? "s" : ""} •{" "}
                         {stats.totalDownloads} download
                         {stats.totalDownloads !== 1 ? "s" : ""}
                       </p>
@@ -999,16 +999,15 @@ export default function EventDetailsPage() {
                   </Card>
                 </div>
 
+                {/* MAIN CHANGE: Fixed Upload Complete Handler */}
                 <div className="mt-8">
                   <h3 className="text-xl font-semibold mb-4">Upload Photos</h3>
                   <PhotoUpload
                     eventId={event?._id}
-                    onUploadComplete={() => {
-                      // Refresh photos or do something after upload
-                      console.log("Photos uploaded!");
-                    }}
+                    onUploadComplete={handleUploadComplete}
                   />
                 </div>
+
                 {/* Upload Tips */}
                 <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
                   <CardContent className="p-6">
