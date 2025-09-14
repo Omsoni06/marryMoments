@@ -55,6 +55,8 @@ export const photoAPI = {
   getByEvent: (eventId) => api.get(`/photos/event/${eventId}`),
   like: (photoId) => api.post(`/photos/${photoId}/like`),
   download: (photoId) => api.get(`/photos/${photoId}/download`),
+  getByEventAndTag: (eventId, tag) =>
+    api.get(`/photos/event/${eventId}/tag/${tag}`),
 };
 
 export default api;

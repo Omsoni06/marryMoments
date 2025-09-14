@@ -54,6 +54,21 @@ export default function GuestGalleryPage() {
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("newest");
   const [likedPhotos, setLikedPhotos] = useState(new Set());
+  const [selectedTag, setSelectedTag] = useState("all");
+  const [tagCounts, setTagCounts] = useState({});
+
+  // ✅ ADD FUNCTION TO CALCULATE TAG COUNTS
+  const calculateTagCounts = (photos) => {
+    const counts = {};
+    photos.forEach((photo) => {
+      if (photo.tags && photo.tags.length > 0) {
+        photo.tags.forEach((tag) => {
+          counts[tag.category] = (counts[tag.category] || 0) + 1;
+        });
+      }
+    });
+    return counts;
+  };
 
   useEffect(() => {
     if (params.accessCode) {
@@ -73,9 +88,17 @@ export default function GuestGalleryPage() {
         photo.originalName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (photo.tags &&
           photo.tags.some((tag) =>
-            tag.toLowerCase().includes(searchTerm.toLowerCase())
+            tag.category.toLowerCase().includes(searchTerm.toLowerCase())
           ))
     );
+
+    // ✅ ADD TAG FILTERING
+    if (selectedTag !== "all") {
+      filtered = filtered.filter(
+        (photo) =>
+          photo.tags && photo.tags.some((tag) => tag.category === selectedTag)
+      );
+    }
 
     // Sort photos
     filtered.sort((a, b) => {
@@ -92,7 +115,39 @@ export default function GuestGalleryPage() {
     });
 
     setFilteredPhotos(filtered);
-  }, [photos, searchTerm, sortBy]);
+    // ✅ CALCULATE TAG COUNTS
+    setTagCounts(calculateTagCounts(photos));
+  }, [photos, searchTerm, sortBy, selectedTag]);
+
+  // ✅ ADD TAG CATEGORIES DEFINITION
+  const tagCategories = [
+    { key: "all", label: "🖼️ All Photos", color: "bg-gray-100 text-gray-800" },
+    { key: "ceremony", label: "💒 Ceremony", color: "bg-red-100 text-red-800" },
+    {
+      key: "reception",
+      label: "🎉 Reception",
+      color: "bg-blue-100 text-blue-800",
+    },
+    { key: "couple", label: "💑 Couple", color: "bg-pink-100 text-pink-800" },
+    { key: "family", label: "👨‍👩‍👧‍👦 Family", color: "bg-green-100 text-green-800" },
+    { key: "dance", label: "💃 Dance", color: "bg-purple-100 text-purple-800" },
+    {
+      key: "candid",
+      label: "📸 Candid",
+      color: "bg-yellow-100 text-yellow-800",
+    },
+    {
+      key: "mehendi",
+      label: "🎨 Mehendi",
+      color: "bg-orange-100 text-orange-800",
+    },
+    { key: "food", label: "🍽️ Food", color: "bg-indigo-100 text-indigo-800" },
+    {
+      key: "decoration",
+      label: "🌸 Decorations",
+      color: "bg-teal-100 text-teal-800",
+    },
+  ];
 
   const fetchEventByAccessCode = async () => {
     try {
@@ -379,11 +434,11 @@ export default function GuestGalleryPage() {
         {/* Search and Filter Bar - Mobile Responsive */}
         <Card className="mb-6 md:mb-8 border-0 shadow-lg bg-white bg-opacity-80 backdrop-blur-sm">
           <CardContent className="p-4 md:p-6">
-            <div className="flex flex-col gap-3 md:gap-4">
+            <div className="space-y-4">
               {/* Header with refresh button */}
               <div className="flex items-center justify-between">
                 <h2 className="text-lg md:text-xl font-semibold text-gray-900">
-                  Photo Gallery
+                  Smart Photo Gallery
                 </h2>
                 <Button
                   variant="ghost"
@@ -398,18 +453,56 @@ export default function GuestGalleryPage() {
                 </Button>
               </div>
 
+              {/* Smart Tag Filters */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Smart Categories:
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {tagCategories.map((category) => {
+                    const count =
+                      category.key === "all"
+                        ? photos.length
+                        : tagCounts[category.key] || 0;
+                    return (
+                      <Button
+                        key={category.key}
+                        variant={
+                          selectedTag === category.key ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setSelectedTag(category.key)}
+                        disabled={count === 0 && category.key !== "all"}
+                        className={`text-xs h-8 ${
+                          selectedTag === category.key
+                            ? "bg-blue-600 text-white"
+                            : count === 0 && category.key !== "all"
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-blue-50"
+                        }`}
+                      >
+                        {category.label} ({count})
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Search bar */}
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 md:w-5 md:h-5" />
                 <Input
-                  placeholder="Search photos by name or tags..."
+                  placeholder="Search photos by name or category..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8 md:pl-10 h-10 md:h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm md:text-base"
                 />
               </div>
 
-              {/* Sort and view controls */}
+              {/* Sort controls */}
               <div className="flex gap-2 md:gap-3">
                 <select
                   value={sortBy}
@@ -433,29 +526,58 @@ export default function GuestGalleryPage() {
                 </Button>
               </div>
 
-              {/* Search results info */}
-              {searchTerm && (
-                <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg">
-                  <span>
-                    Showing {filteredPhotos.length} photos for "{searchTerm}"
+              {/* Active filters display */}
+              {(selectedTag !== "all" || searchTerm) && (
+                <div className="flex flex-wrap items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                  <span className="text-sm text-blue-700 font-medium">
+                    Active filters:
                   </span>
+                  {selectedTag !== "all" && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200"
+                      onClick={() => setSelectedTag("all")}
+                    >
+                      {
+                        tagCategories.find((cat) => cat.key === selectedTag)
+                          ?.label
+                      }{" "}
+                      ×
+                    </Badge>
+                  )}
+                  {searchTerm && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200"
+                      onClick={() => setSearchTerm("")}
+                    >
+                      "{searchTerm}" ×
+                    </Badge>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSearchTerm("")}
-                    className="text-blue-600 hover:text-blue-800 p-1"
+                    onClick={() => {
+                      setSelectedTag("all");
+                      setSearchTerm("");
+                    }}
+                    className="text-blue-600 hover:text-blue-800 p-1 text-xs"
                   >
-                    Clear
+                    Clear all
                   </Button>
                 </div>
               )}
 
-              {/* Photo count display */}
-              {filteredPhotos.length > 0 && (
+              {/* Results count */}
+              {filteredPhotos.length !== photos.length && (
                 <div className="text-center">
                   <p className="text-sm text-gray-600">
-                    Viewing {filteredPhotos.length} of {photos.length} photos
-                    {searchTerm && ` matching "${searchTerm}"`}
+                    Showing {filteredPhotos.length} of {photos.length} photos
+                    {selectedTag !== "all" &&
+                      ` in ${
+                        tagCategories.find((cat) => cat.key === selectedTag)
+                          ?.label
+                      }`}
                   </p>
                 </div>
               )}
@@ -558,6 +680,81 @@ export default function GuestGalleryPage() {
                       #{index + 1}
                     </Badge>
                   </div>
+
+                  {/* ✅ NEW: Smart Tags Display */}
+                  <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2">
+                    {photo.tags && photo.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {photo.tags.slice(0, 2).map((tag, tagIndex) => (
+                          <Badge
+                            key={tagIndex}
+                            className="text-xs px-1.5 py-0.5 border-0 shadow-sm font-medium"
+                            style={{
+                              fontSize: "8px",
+                              backgroundColor:
+                                tag.category === "ceremony"
+                                  ? "#fee2e2"
+                                  : tag.category === "reception"
+                                  ? "#dbeafe"
+                                  : tag.category === "couple"
+                                  ? "#fce7f3"
+                                  : tag.category === "family"
+                                  ? "#dcfce7"
+                                  : tag.category === "dance"
+                                  ? "#f3e8ff"
+                                  : tag.category === "candid"
+                                  ? "#fef3c7"
+                                  : tag.category === "mehendi"
+                                  ? "#fed7aa"
+                                  : tag.category === "food"
+                                  ? "#e0e7ff"
+                                  : tag.category === "decoration"
+                                  ? "#d1fae5"
+                                  : tag.category === "ritual"
+                                  ? "#fecaca"
+                                  : tag.category === "kids"
+                                  ? "#fde68a"
+                                  : tag.category === "outdoor"
+                                  ? "#bbf7d0"
+                                  : tag.category === "indoor"
+                                  ? "#e5e7eb"
+                                  : "#f3f4f6",
+                              color:
+                                tag.category === "ceremony"
+                                  ? "#991b1b"
+                                  : tag.category === "reception"
+                                  ? "#1e40af"
+                                  : tag.category === "couple"
+                                  ? "#be185d"
+                                  : tag.category === "family"
+                                  ? "#166534"
+                                  : tag.category === "dance"
+                                  ? "#7c3aed"
+                                  : tag.category === "candid"
+                                  ? "#d97706"
+                                  : tag.category === "mehendi"
+                                  ? "#ea580c"
+                                  : tag.category === "food"
+                                  ? "#4338ca"
+                                  : tag.category === "decoration"
+                                  ? "#065f46"
+                                  : tag.category === "ritual"
+                                  ? "#dc2626"
+                                  : tag.category === "kids"
+                                  ? "#b45309"
+                                  : tag.category === "outdoor"
+                                  ? "#047857"
+                                  : tag.category === "indoor"
+                                  ? "#4b5563"
+                                  : "#6b7280",
+                            }}
+                          >
+                            🏷️ {tag.category}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Mobile photo info */}
@@ -565,6 +762,12 @@ export default function GuestGalleryPage() {
                   <div className="flex justify-between items-center">
                     <p className="text-xs font-medium text-gray-900 truncate flex-1 mr-2">
                       Photo {index + 1}
+                      {/* Show tags on mobile too */}
+                      {photo.tags && photo.tags.length > 0 && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          • {photo.tags[0].category}
+                        </span>
+                      )}
                     </p>
                     <div className="flex items-center space-x-2">
                       <button
@@ -674,11 +877,20 @@ export default function GuestGalleryPage() {
                   </Button>
                 </div>
 
-                {/* Photo Counter */}
-                <div className="absolute top-2 md:top-4 left-1/2 transform -translate-x-1/2">
+                {/* Photo Counter with Tags */}
+                <div className="absolute top-2 md:top-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
                   <Badge className="bg-black bg-opacity-50 text-white border-white border-opacity-30 backdrop-blur-sm text-xs md:text-sm">
                     {currentPhotoIndex + 1} of {filteredPhotos.length}
                   </Badge>
+                  {/* Show tags in viewer */}
+                  {selectedPhoto.tags && selectedPhoto.tags.length > 0 && (
+                    <Badge
+                      className="bg-blue-600 bg-opacity-90 text-white border-0 text-xs md:text-sm"
+                      style={{ fontSize: "10px" }}
+                    >
+                      🏷️ {selectedPhoto.tags[0].category}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </DialogContent>

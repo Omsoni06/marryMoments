@@ -60,6 +60,59 @@ const photoSchema = new mongoose.Schema(
       cameraMake: String,
       cameraModel: String,
     },
+
+    tags: [
+      {
+        category: {
+          type: String,
+          enum: [
+            "ceremony", // Main wedding rituals
+            "reception", // Reception party
+            "family", // Family portraits
+            "couple", // Bride & groom photos
+            "candid", // Candid moments
+            "dance", // Dancing moments
+            "food", // Food/catering
+            "decoration", // Venue decorations
+            "group", // Group photos
+            "ritual", // Religious rituals
+            "mehendi", // Mehendi ceremony
+            "sangam", // Pre-wedding functions
+            "kids", // Children at wedding
+            "elderly", // Elder family members
+            "outdoor", // Outdoor shots
+            "indoor", // Indoor shots
+          ],
+          required: true,
+        },
+        confidence: {
+          type: Number,
+          min: 0,
+          max: 1,
+          required: true,
+        },
+        detectedObjects: [String], // What AI detected in image
+        manuallyAdded: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
+
+    aiAnalysis: {
+      processed: {
+        type: Boolean,
+        default: false,
+      },
+      processedAt: Date,
+      detectedObjects: [String],
+      sceneType: String,
+      peopleCount: Number,
+      emotionAnalysis: {
+        dominant: String, // happy, joyful, surprised
+        confidence: Number,
+      },
+    },
   },
   {
     timestamps: true,

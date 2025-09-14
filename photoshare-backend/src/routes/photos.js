@@ -20,5 +20,6 @@ router.post(
 router.get("/event/:eventId", getPhotosByEvent);
 router.post("/:photoId/like", likePhoto);
 router.get("/:photoId/download", downloadPhoto);
+router.get("/event/:eventId/tag/:tag", getPhotosByTag);
 
 module.exports = router;
