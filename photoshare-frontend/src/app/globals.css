@@ -1,7 +1,6 @@
-/* Import Tailwind - Tailwind v4 syntax */
-@import "tailwindcss";
+/* Tailwind v4 - No @tailwind directives needed */
 
-/* Custom base styles */
+/* Base styles */
 html {
   font-size: 16px;
 }
