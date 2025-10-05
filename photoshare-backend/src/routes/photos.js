@@ -2,8 +2,10 @@ const express = require("express");
 const {
   uploadPhotos,
   getPhotosByEvent,
+  getPhotosByTag,
   likePhoto,
   downloadPhoto,
+  deletePhoto,
 } = require("../controllers/photoController");
 const auth = require("../middleware/auth");
 const { upload, handleMulterError } = require("../middleware/upload");
@@ -21,5 +23,6 @@ router.get("/event/:eventId", getPhotosByEvent);
 router.post("/:photoId/like", likePhoto);
 router.get("/:photoId/download", downloadPhoto);
 router.get("/event/:eventId/tag/:tag", getPhotosByTag);
+router.delete("/:photoId", auth, deletePhoto);
 
 module.exports = router;

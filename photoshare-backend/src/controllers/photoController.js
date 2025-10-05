@@ -641,11 +641,63 @@ const downloadPhoto = async (req, res) => {
     });
   }
 };
+// photoshare-backend/src/controllers/photoController.js
 
+const deletePhoto = async (req, res) => {
+  try {
+    const { photoId } = req.params;
+
+    // Find the photo
+    const photo = await Photo.findById(photoId).populate("event");
+
+    if (!photo) {
+      return res.status(404).json({
+        success: false,
+        message: "Photo not found",
+      });
+    }
+
+    // Check if user is the photographer who owns this event
+    if (photo.event.photographer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to delete this photo",
+      });
+    }
+
+    // Delete from Cloudinary
+    try {
+      await cloudinary.uploader.destroy(photo.cloudinaryPublicId);
+      console.log(`Deleted from Cloudinary: ${photo.cloudinaryPublicId}`);
+    } catch (cloudinaryError) {
+      console.error("Cloudinary deletion error:", cloudinaryError);
+      // Continue even if Cloudinary deletion fails
+    }
+
+    // Delete from MongoDB
+    await Photo.findByIdAndDelete(photoId);
+
+    res.json({
+      success: true,
+      message: "Photo deleted successfully",
+      photoId: photoId,
+    });
+  } catch (error) {
+    console.error("Delete photo error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete photo",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// Add to exports
 module.exports = {
   uploadPhotos,
   getPhotosByEvent,
-  getPhotosByTag, // ✅ ADD NEW EXPORT
+  getPhotosByTag,
   likePhoto,
   downloadPhoto,
+  deletePhoto, // ✅ ADD THIS
 };

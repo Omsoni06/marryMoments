@@ -47,6 +47,8 @@ export const eventAPI = {
 };
 
 // ✅ FIXED: Update photo API to match your backend routes
+// photoshare-frontend/src/lib/api.js
+
 export const photoAPI = {
   upload: (eventId, formData) =>
     api.post(`/photos/upload/${eventId}`, formData, {
@@ -57,6 +59,5 @@ export const photoAPI = {
   download: (photoId) => api.get(`/photos/${photoId}/download`),
   getByEventAndTag: (eventId, tag) =>
     api.get(`/photos/event/${eventId}/tag/${tag}`),
+  delete: (photoId) => api.delete(`/photos/${photoId}`), // ✅ ADD THIS
 };
-
-export default api;

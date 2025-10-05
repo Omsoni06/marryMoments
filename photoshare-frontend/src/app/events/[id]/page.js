@@ -37,6 +37,8 @@ import {
   TrendingUp,
   Zap,
   Globe,
+  Trash2, // ✅ ADD THIS
+  ZoomIn,
   Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -58,7 +60,8 @@ export default function EventDetailsPage() {
     totalDownloads: 0,
     activeGuests: 0,
   });
-
+  const [photoToDelete, setPhotoToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   useEffect(() => {
     if (params.id) {
       fetchEvent();
@@ -109,6 +112,31 @@ export default function EventDetailsPage() {
     setPhotosLoading(false);
   };
 
+  const handleDeletePhoto = async (photoId) => {
+    if (deleteLoading) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this photo? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    setDeleteLoading(true);
+
+    try {
+      await photoAPI.delete(photoId);
+
+      // Remove from local state
+      setPhotos((prev) => prev.filter((p) => p._id !== photoId));
+
+      toast.success("Photo deleted successfully! 🗑️");
+    } catch (error) {
+      console.error("Delete failed:", error);
+      toast.error("Failed to delete photo. Please try again.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
   const handleUploadComplete = () => {
     fetchPhotos();
     fetchEvent();
@@ -820,6 +848,7 @@ export default function EventDetailsPage() {
                   </div>
 
                   {/* Photos Grid */}
+                  {/* Photos Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {photos.map((photo, index) => (
                       <Card
@@ -851,19 +880,41 @@ export default function EventDetailsPage() {
                             </div>
                           </div>
 
-                          {/* Action Buttons */}
-                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 space-y-2">
+                          {/* ✅ Action Buttons - UPDATED WITH DELETE */}
+                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col space-y-2">
+                            {/* View Button */}
                             <Button
                               size="sm"
-                              className="bg-white bg-opacity-90 text-gray-700 hover:bg-white shadow-lg backdrop-blur-sm"
+                              onClick={() =>
+                                window.open(photo.cloudinaryUrl, "_blank")
+                              }
+                              className="bg-white bg-opacity-90 text-blue-600 hover:bg-white shadow-lg backdrop-blur-sm p-2"
                             >
-                              <Eye className="w-4 h-4" />
+                              <ZoomIn className="w-4 h-4" />
                             </Button>
+
+                            {/* Download Button */}
                             <Button
                               size="sm"
-                              className="bg-white bg-opacity-90 text-gray-700 hover:bg-white shadow-lg backdrop-blur-sm"
+                              onClick={() =>
+                                window.open(photo.cloudinaryUrl, "_blank")
+                              }
+                              className="bg-white bg-opacity-90 text-green-600 hover:bg-white shadow-lg backdrop-blur-sm p-2"
                             >
                               <Download className="w-4 h-4" />
+                            </Button>
+
+                            {/* ✅ DELETE BUTTON - NEW */}
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePhoto(photo._id);
+                              }}
+                              disabled={deleteLoading}
+                              className="bg-white bg-opacity-90 text-red-600 hover:bg-red-50 shadow-lg backdrop-blur-sm p-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
 
@@ -873,6 +924,15 @@ export default function EventDetailsPage() {
                               #{index + 1}
                             </Badge>
                           </div>
+
+                          {/* ✅ Show AI Tags if available */}
+                          {photo.tags && photo.tags.length > 0 && (
+                            <div className="absolute bottom-3 left-3">
+                              <Badge className="bg-blue-600 bg-opacity-90 text-white text-xs px-2 py-1 border-0">
+                                🏷️ {photo.tags[0].category}
+                              </Badge>
+                            </div>
+                          )}
                         </div>
 
                         {/* Photo Info */}
